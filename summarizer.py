@@ -34,6 +34,15 @@ def list_files(num_files=10):
         print "\n\n\n"
         print full_text.encode('utf-8').strip()
 
+def make_xml(a_id, text, summary):
+    root = ET.Element("root")
+    article_id = ET.SubElement(root, "article", id=a_id)
+
+    ET.SubElement(article_id, "summary").text = summary 
+    ET.SubElement(article_id, "text").text = text
+
+    tree = ET.ElementTree(root)
+    tree.write("filename.xml")
 
 def main():  
   list_files(20)
