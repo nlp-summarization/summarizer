@@ -40,8 +40,11 @@ def parse_files(folder_path, num_files=1000000):
             full_text = full_text + paragraph.text
 
         num_files_read = num_files_read + 1
-        make_xml(root_tag, os.path.splitext(file)[0], abstract_text, full_text)
+        root_tag = make_xml(root_tag, os.path.splitext(file)[0], abstract_text, full_text)
         print_progress(num_files_read)
+
+  tree = ET.ElementTree(root_tag)
+  tree.write(parse_file_name)
 
 def print_progress(progress):
   global total_files
@@ -60,9 +63,7 @@ def make_xml(root_tag, a_id, summary, text):
   text_tag.text = text
   
   root_tag.append(article_id)
-  tree = ET.ElementTree(root_tag)
-  
-  tree.write(parse_file_name)
+  return root_tag
 
 def main():
 
