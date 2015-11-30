@@ -5,7 +5,8 @@ import xml.etree.ElementTree
 import xml.etree.cElementTree as ET
 import os, glob
 
-def parse_files(folder_path, num_files=10):
+def parse_files(folder_path, num_files=1000000):
+
   num_files_read = 0
   root_tag = ET.Element("root")
 
@@ -27,17 +28,26 @@ def parse_files(folder_path, num_files=10):
           continue
 
         for paragraph in abstract_tag:
-          abstract_text = abstract_text + paragraph.text
+          if paragraph.text != None:
+            abstract_text = abstract_text + paragraph.text
         
         if len(abstract_text) > 140:
           continue
 
         full_text = ''
         for paragraph in e.findall("body/body.content/block[@class='full_text']/p"):
-          full_text = full_text + paragraph.text
+          if paragraph.text != None:
+            full_text = full_text + paragraph.text
 
         num_files_read = num_files_read + 1
         make_xml(root_tag, os.path.splitext(file)[0], abstract_text, full_text)
+        print_progress(num_files_read)
+
+def print_progress(progress):
+  global total_files
+
+  sys.stdout.write("Percent files read: %d%%   \r" % ( round(float(progress*100.00)/float(total_files)) ))
+  sys.stdout.flush()
 
 def make_xml(root_tag, a_id, summary, text):
   global parse_file_name
@@ -55,13 +65,16 @@ def make_xml(root_tag, a_id, summary, text):
   tree.write(parse_file_name)
 
 def main():
+
   directory = "."
   if len(sys.argv) > 1:
     directory = argv[1]
   
-  global parse_file_name
+  global parse_file_name, total_files
+  total_files = 2000 
   parse_file_name = "parsed_summaries.xml"
-  parse_files(directory, 20)
+  parse_files(directory, total_files)
+  
 
 if __name__ == "__main__":
   main()
