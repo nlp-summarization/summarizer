@@ -30,6 +30,7 @@ def list_files(num_files=10):
         num_files_read = num_files_read + 1
         # e.clear()
         print(os.path.join(root, file))
+        print os.path.splitext(file)[0]
         print abstract_text.encode('utf-8').strip()
         print "\n\n\n"
         print full_text.encode('utf-8').strip()
