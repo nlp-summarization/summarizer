@@ -5,11 +5,11 @@ import xml.etree.ElementTree
 import xml.etree.cElementTree as ET
 import os, glob
 
-def list_files(num_files=10):
+def parse_files(folder_path, num_files=10):
   num_files_read = 0
   root_tag = ET.Element("root")
 
-  for root, dirs, files in os.walk("."):
+  for root, dirs, files in os.walk(folder_path):
     path = root.split('/')
     
     for file in files:
@@ -40,25 +40,28 @@ def list_files(num_files=10):
         make_xml(root_tag, os.path.splitext(file)[0], abstract_text, full_text)
 
 def make_xml(root_tag, a_id, summary, text):
-    global parse_file_name
-    article_id = ET.Element("article", id=a_id)
-
-    summary_tag = ET.SubElement(article_id, "summary")
-    summary_tag.text = summary 
-
-    text_tag = ET.SubElement(article_id, "text")
-    text_tag.text = text
-
-    root_tag.append(article_id)
-    tree = ET.ElementTree(root_tag)
-
-    tree.write(parse_file_name)
+  global parse_file_name
+  article_id = ET.Element("article", id=a_id)
+  
+  summary_tag = ET.SubElement(article_id, "summary")
+  summary_tag.text = summary 
+  
+  text_tag = ET.SubElement(article_id, "text")
+  text_tag.text = text
+  
+  root_tag.append(article_id)
+  tree = ET.ElementTree(root_tag)
+  
+  tree.write(parse_file_name)
 
 def main():
+  directory = "."
+  if len(sys.argv) > 1:
+    directory = argv[1]
+  
   global parse_file_name
   parse_file_name = "parsed_summaries.xml"
-  list_files(20)
-  
+  parse_files(directory, 20)
 
 if __name__ == "__main__":
   main()
