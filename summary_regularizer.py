@@ -72,7 +72,7 @@ def main():
     directory = argv[1]
   
   global parse_file_name, total_files
-  total_files = 2000 
+  total_files = 1000000
   parse_file_name = "parsed_summaries.xml"
   parse_files(directory, total_files)
   
