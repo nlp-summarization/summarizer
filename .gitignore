@@ -1,3 +1,4 @@
 /NYT Corpus
-parsed_summaries.xml
+/data
 .DS_Store
+/test-summarization
