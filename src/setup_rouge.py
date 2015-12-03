@@ -4,6 +4,7 @@ import pdb
 import xml.etree.cElementTree as ET
 import os, glob
 import re
+import codecs
 
 def parse_files():
 
@@ -21,9 +22,11 @@ def parse_files():
       write_to_file(system_file_name, summary)
 
 def write_to_file(filename, summary):
-  f = open(filename, "w")
-  f.write(summary)
-  f.close()
+    with codecs.open(filename, 'w', encoding='utf8') as f:
+        f.write(str(summary.encode('ascii', errors='ignore')))
+  #f = open(filename, "w")
+  #f.write(summary)
+  #f.close()
 
 def main():
 
