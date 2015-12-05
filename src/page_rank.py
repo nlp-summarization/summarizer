@@ -57,6 +57,9 @@ def start_page_rank(article_id, text=None):
   [dictionary, proc_text, sentences] = save_word_dict(text)
   raw_corpus = [dictionary.doc2bow(t) for t in proc_text]
 
+  if(len(raw_corpus) <= 1):
+    return -1
+
   tfidf        = models.TfidfModel(raw_corpus)
   corpus_tfidf = tfidf[raw_corpus]
   simMat       = similarities.MatrixSimilarity(tfidf[raw_corpus])
@@ -119,7 +122,13 @@ def start_page_rank(article_id, text=None):
     result_summary = result_summary + ' ' + sentences[ranked_sentences[i]]
 
   # print result_summary
-  reference_summary = summarize(text)
+  try:
+    reference_summary = summarize(text, word_count = 20)
+  except (ValueError, ZeroDivisionError):
+    return -1
+
+  if(reference_summary == None or len(reference_summary) == 0 or len(reference_summary) > 140):
+    return -1
 
   # system_summary = "Morpheus wakes Neo into the real world that has been captured by machines."
   system_summary = result_summary
@@ -135,6 +144,7 @@ def start_page_rank(article_id, text=None):
   write_to_file(sys_dir, system_summary)
   system_summary_list.append(sys_dir)
   test_print(reference_summary, system_summary)
+  return 1
 
 def test_print(reference_summary, system_summary):
   print "\n### reference_summary ###"
@@ -159,20 +169,15 @@ def generate_score():
     article_id = t.get('id')
     reference_summary = t.find("summary").text
     text = t.find("text").text
-    try:
-      system_summary = summarize(text, word_count = 20)
-    except (ValueError, ZeroDivisionError):
-      continue 
 
-    if(system_summary == None or len(system_summary) > 140 or len(system_summary) == 0 ):
-      continue
     # call page_rank
-    start_page_rank(article_id, text)
+    result_code = start_page_rank(article_id, text)
 
     if (files_read > 10):
       break
 
-    files_read = files_read + 1
+    if(result_code != -1):
+      files_read = files_read + 1
 
 def main():
   global system_summary_list, reference_summary_list
