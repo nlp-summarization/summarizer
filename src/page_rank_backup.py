@@ -31,13 +31,11 @@ def save_word_dict(text):
       continue
     proc_text.append(proc_sentence)
 
-  print proc_text
-
   dictionary = corpora.Dictionary(proc_text)
   # dictionary.save(os.pardir + '/data/text.dict')
-  return [dictionary, proc_text]
+  return [dictionary, proc_text, sentences]
 
-def start_page_rank():
+def page_rank():
   global reference_summary_list, system_summary_list
 
   text = "Thomas A. Anderson is a man living two lives. By day he is an " + \
@@ -55,28 +53,67 @@ def start_page_rank():
   "programs devoted to snuffing out Neo and the entire human " + \
   "rebellion. "
 
-  [dictionary, proc_text] = save_word_dict(text)
+  [dictionary, proc_text, sentences] = save_word_dict(text)
 
   raw_corpus = [dictionary.doc2bow(t) for t in proc_text]
-
-  print raw_corpus
 
   tfidf = models.TfidfModel(raw_corpus)
   
   # print tfidf
   corpus_tfidf = tfidf[raw_corpus]
-  print corpus_tfidf
 
-  print corpus_tfidf[1]
   # print dictionary
   # load from   
+  simMatrix= similarities.MatrixSimilarity(tfidf[raw_corpus])
+  simMat = simMatrix[corpus_tfidf]
 
-  print 'Input text:'
-  print text
-  print
+  s_len = len(proc_text)
+  ranks = [1.0] * s_len
+  old_ranks = [0.1] * s_len
 
-  reference_summary = summarize(text)
-  system_summary = "Morpheus wakes Neo into the real world that has been captured by machines."
+  W = {}
+  for i, s1 in enumerate(proc_text):
+    for j, s2 in enumerate(s1):
+      W[(i,j)] = s2
+
+  damping_factor = 0.5
+  while not converged(ranks, old_ranks):
+    old_ranks = ranks
+    for i in xrange(s_len):
+      summation = 0.0
+      for j in xrange(s_len):
+        if j == i:
+          continue
+        if j < i:
+          W[(j,i)] = simMat[j][i]
+        else:
+          W[(j,i)] = simMat[i][j]
+        prj = ranks[j]
+        densum = 0.0
+        for k in xrange(s_len):
+          if k == j:
+            continue
+          if j < k:
+            W[(j,k)] = simMat[j][k]
+          else:
+            W[(j,k)] = simMat[k][j]
+          densum = densum + W[(j,k)]
+        summation = summation + W[(j,i)] * (prj/densum)
+        ranks[i] = (1-damping_factor) + (damping_factor * summation)
+
+  rankings = sorted(range(len(ranks)), key=lambda k: ranks[k])
+  rankings.reverse()
+  print rankings
+
+  limit = 3
+  system_summary = ""
+  for i,index in enumerate(rankings):
+    if i > limit:
+      break
+    system_summary = system_summary + " " + str(sentences[index])
+
+
+  reference_summary = summarize(text, word_count=100)
   article_id = "test" # this should be filename id
   
   # write reference summary to file
@@ -88,8 +125,14 @@ def start_page_rank():
   # write system summary to file
   write_to_file(sys_dir, system_summary)
   system_summary_list.append(sys_dir)
-
   test_print(reference_summary, system_summary)
+
+def converged(ranks, old_ranks):
+  print ranks
+  if ranks == old_ranks:
+    return True
+  else:
+    return False
 
 def test_print(reference_summary, system_summary):
   print "\n### reference_summary ###"
@@ -107,7 +150,7 @@ def main():
   system_summary_list = []
   reference_summary_list = []
 
-  start_page_rank()
+  page_rank()
   recall_list,precision_list,F_measure_list = PythonROUGE(parent_dir, system_summary_list,reference_summary_list, 1)
   print ('recall = ' + str(recall_list))
   print ('precision = ' + str(precision_list))
