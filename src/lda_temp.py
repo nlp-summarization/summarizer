@@ -23,8 +23,10 @@ tokens_once = set(word for word in set(all_tokens) if all_tokens.count(word) == 
 texts = [[word for word in text if word not in tokens_once]
          for text in texts]
 
-dictionary = corpora.Dictionary(texts)
-corpus = [dictionary.doc2bow(text) for text in texts]
+dictionary   = corpora.Dictionary(texts)
+corpus       = [dictionary.doc2bow(text) for text in texts]
+tfidf        = models.TfidfModel(corpus)
+corpus_tfidf = tfidf[corpus]
 
 # I can print out the topics for LSA
 lsi = models.LsiModel(corpus_tfidf, id2word=dictionary, num_topics=2)
