@@ -58,32 +58,45 @@ def start_page_rank(article_id, text=None):
   [dictionary, proc_text, sentences] = save_word_dict(text)
   raw_corpus = [dictionary.doc2bow(t) for t in proc_text]
 
+  print raw_corpus
 
+  # raw_corpus has sentence to (unique words -> frequency)
   if(len(raw_corpus) <= 1):
     return -1
 
   tfidf        = models.TfidfModel(raw_corpus)
   corpus_tfidf = tfidf[raw_corpus]
+
+  for a in raw_corpus:
+    print a
+
+  for a in corpus_tfidf:
+    print a
+
   simMat       = similarities.MatrixSimilarity(tfidf[raw_corpus])
   similarityMatrix = simMat[corpus_tfidf]
 
-  lda = ldamodel.LdaModel(raw_corpus, num_topics=10)
+  lda = ldamodel.LdaModel(raw_corpus, num_topics=3)
   # lda.print_topics()
   # for i in range(0, lda.num_topics-1):
   #   print lda.print_topic(i)
+  #   
+  print similarityMatrix
+
   print len(dictionary.keys())
   corpus_lda = lda[raw_corpus]
   # print lda
   # print corpus_lda
-  # for i in corpus_lda:
-  #   print i
+  for i in corpus_lda:
+    print i
 
+  print "topics"
   print lda.show_topics()
 
 
   reference_summary = summarize(text, word_count = 200)
  
-  system_summary = "hello"
+  system_summary = reference_summary
   
   # write reference summary to file
   ref_dir = os.pardir + "/test-summarization/reference/" + article_id + "_" + "reference.txt"

@@ -35,5 +35,5 @@ corpus_lsi = lsi[corpus]
 for l,t in izip(corpus_lsi,corpus):
   print l,"#",t
 print
-for top in lsi.print_topics(2):
+for top in lsi.print_topics():
   print top
