@@ -19,10 +19,12 @@ from PythonROUGE import *
 
 import lsa
 import baseline
+import page_rank
 
 global ROUGE_path, data_path
 global reference_summary_list
 global system_summary_list
+global rouge_score_summaries
 
 def parse_text(folder_path, num_files=1):
 
@@ -114,7 +116,7 @@ def generate_lsa_score(raw_texts, summ_texts, num_files=20):
   system_summary_list    = lsa.system_summary_list
   reference_summary_list = lsa.reference_summary_list
 
-def run_summary_algos(num_files=10):
+def run_summary_algos(num_files=1):
   [raw_texts, summ_texts] = parse_summary_documents(num_files)
   
   # run baseline
@@ -122,9 +124,32 @@ def run_summary_algos(num_files=10):
   # run lsa
   run_lsa(raw_texts, summ_texts, num_files)
 
+  run_page_rank(raw_texts, summ_texts, num_files)
+
+def run_page_rank(raw_texts, summ_texts, num_files=20):
+  global system_summary_list, reference_summary_list, rouge_score_summaries
+  system_summary_list = []
+  reference_summary_list = []
+
+  page_rank.system_summary_list = []
+  page_rank.reference_summary_list = []
+
+  for text_id in raw_texts.keys():
+    page_rank.start_page_rank(text_id, 2, summ_texts[text_id], raw_texts[text_id])
+
+  system_summary_list    = page_rank.system_summary_list
+  reference_summary_list = page_rank.reference_summary_list
+
+  recall_list,precision_list,F_measure_list = PythonROUGE(parent_dir, system_summary_list,reference_summary_list, 1)
+
+  score_summary = {}
+  score_summary["recall"] = str(recall_list)
+  score_summary["precision"] = str(precision_list)
+  score_summary["F"] = str(F_measure_list)
+  rouge_score_summaries["Page Rank"] = score_summary
 
 def run_baseline(raw_texts, summ_texts, num_files=20):
-  global system_summary_list, reference_summary_list
+  global system_summary_list, reference_summary_list, rouge_score_summaries
   system_summary_list = []
   reference_summary_list = []
 
@@ -133,32 +158,46 @@ def run_baseline(raw_texts, summ_texts, num_files=20):
 
   for text_id in raw_texts.keys():
     baseline.run_baseline(text_id, 2, summ_texts[text_id], raw_texts[text_id])
-    # lsa.start_lsa(text_id, 5, raw_texts[text_id], summ_texts[text_id])
 
   system_summary_list    = baseline.system_summary_list
   reference_summary_list = baseline.reference_summary_list
 
-  print "BASELINE"  
   recall_list,precision_list,F_measure_list = PythonROUGE(parent_dir, system_summary_list,reference_summary_list, 1)
-  print ('recall = ' + str(recall_list))
-  print ('precision = ' + str(precision_list))
-  print ('F = ' + str(F_measure_list))
-  print "BASELINE END"  
+
+  score_summary = {}
+  score_summary["recall"] = str(recall_list)
+  score_summary["precision"] = str(precision_list)
+  score_summary["F"] = str(F_measure_list)
+  rouge_score_summaries["Baseline"] = score_summary
 
 def run_lsa(raw_texts, summ_texts, num_files=20):
-  global system_summary_list, reference_summary_list
+  global system_summary_list, reference_summary_list, rouge_score_summaries
   system_summary_list = []
   reference_summary_list = []
 
   generate_lsa_score(raw_texts, summ_texts, num_files)
 
   recall_list,precision_list,F_measure_list = PythonROUGE(parent_dir, system_summary_list,reference_summary_list, 1)
-  print ('recall = ' + str(recall_list))
-  print ('precision = ' + str(precision_list))
-  print ('F = ' + str(F_measure_list))
+  # print ('recall = ' + str(recall_list))
+  # print ('precision = ' + str(precision_list))
+  # print ('F = ' + str(F_measure_list))
+  score_summary = {}
+  score_summary["recall"] = str(recall_list)
+  score_summary["precision"] = str(precision_list)
+  score_summary["F"] = str(F_measure_list)
+
+  rouge_score_summaries["LSA"] = score_summary
 
 def main():
-  run_summary_algos()
+  global rouge_score_summaries
+  rouge_score_summaries = {}
+  run_summary_algos(10)
+
+  for model in rouge_score_summaries.keys():
+    print ("########## Model : " + str(model) + " ################ \n")
+    print ('recall = ' + str(rouge_score_summaries[model]['recall']))
+    print ('precision = ' + str(rouge_score_summaries[model]['precision']))
+    print ('F = ' + str(rouge_score_summaries[model]['F']) + "\n")
 
 if __name__ == "__main__":
   main()

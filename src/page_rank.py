@@ -35,7 +35,7 @@ def save_word_dict(text):
   # dictionary.save(os.pardir + '/data/text.dict')
   return [dictionary, proc_text, sentences]
 
-def start_page_rank(article_id, text=None):
+def start_page_rank(article_id, limit, reference_summary, text=None):
   global reference_summary_list, system_summary_list
 
   if(text == None):
@@ -115,20 +115,20 @@ def start_page_rank(article_id, text=None):
   # end while loop
 
   ranked_sentences = sorted(range(len(ranks)),key=lambda x:ranks[x], reverse=True)
-  limit = 1 # to limit number of sentences
+  # limit = 1 # to limit number of sentences
   
   result_summary = ''
   for i in range(0, limit):
     result_summary = result_summary + ' ' + sentences[ranked_sentences[i]]
 
   # print result_summary
-  try:
-    reference_summary = summarize(text, word_count = 20)
-  except (ValueError, ZeroDivisionError):
-    return -1
+  # try:
+  #   reference_summary = summarize(text, word_count = 20)
+  # except (ValueError, ZeroDivisionError):
+  #   return -1
 
-  if(reference_summary == None or len(reference_summary) == 0 or len(reference_summary) > 140):
-    return -1
+  # if(reference_summary == None or len(reference_summary) == 0 or len(reference_summary) > 140):
+  #   return -1
 
   # system_summary = "Morpheus wakes Neo into the real world that has been captured by machines."
   system_summary = result_summary
