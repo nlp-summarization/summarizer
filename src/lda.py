@@ -36,7 +36,7 @@ def save_word_dict(text):
   # dictionary.save(os.pardir + '/data/text.dict')
   return [dictionary, proc_text, sentences]
 
-def start_page_rank(article_id, text=None):
+def start_lda(article_id, num_topics, text=None):
   global reference_summary_list, system_summary_list
 
   if(text == None):
@@ -58,45 +58,83 @@ def start_page_rank(article_id, text=None):
   [dictionary, proc_text, sentences] = save_word_dict(text)
   raw_corpus = [dictionary.doc2bow(t) for t in proc_text]
 
-  print raw_corpus
+  #print raw_corpus
 
   # raw_corpus has sentence to (unique words -> frequency)
   if(len(raw_corpus) <= 1):
     return -1
 
+  #for a in raw_corpus:
+  #  print a
+
+  #for a in corpus_tfidf:
+  #  print a
+
+  
+
   tfidf        = models.TfidfModel(raw_corpus)
   corpus_tfidf = tfidf[raw_corpus]
-
-  for a in raw_corpus:
-    print a
-
-  for a in corpus_tfidf:
-    print a
-
   simMat       = similarities.MatrixSimilarity(tfidf[raw_corpus])
   similarityMatrix = simMat[corpus_tfidf]
+  #print "similarity matrix"
+  #print similarityMatrix
 
-  lda = ldamodel.LdaModel(raw_corpus, num_topics=3)
+  lda = ldamodel.LdaModel(raw_corpus, num_topics=num_topics)
   # lda.print_topics()
   # for i in range(0, lda.num_topics-1):
   #   print lda.print_topic(i)
   #   
-  print similarityMatrix
+  #print similarityMatrix
 
-  print len(dictionary.keys())
+  #print len(dictionary.keys())
   corpus_lda = lda[raw_corpus]
   # print lda
   # print corpus_lda
-  for i in corpus_lda:
-    print i
+  for s in corpus_lda:
+    print s
 
-  print "topics"
-  print lda.show_topics()
+  #print "\ntopics:"
+  #print lda.show_topics()
 
+  # Sum of probabilites for each topic
+  TS = {}
+  for j in xrange(num_topics): TS[j] = 0
+  for i,s in enumerate(sentences):
+    for j in xrange(num_topics):
+      topic = corpus_lda[i][j][0]
+      prob = corpus_lda[i][j][1]
+      TS[topic] = TS[topic] + prob
+  print "TS: "
+  print TS
+
+  # find topic with largest probability
+  largest_topic = 0
+  largest_p = sys.float_info.min
+  for t in TS:
+    p = TS[t]
+    if p > largest_p:
+      largest_p = p
+      largest_topic = t
+
+  # collect sentences to rank for largest topic
+  ranks = []
+  for i,s in enumerate(sentences):
+      topic = corpus_lda[i][largest_topic][0]
+      prob = corpus_lda[i][largest_topic][1]
+      ranks.append(prob)
+
+  ranked_sentences = sorted(range(len(ranks)),key=lambda x:ranks[x], reverse=True)
+
+  print ranked_sentences
+
+  limit = 2
+  result_summary = ''
+  for i in range(0, limit):
+    result_summary = result_summary + ' ' + sentences[ranked_sentences[i]]
 
   reference_summary = summarize(text, word_count = 200)
  
-  system_summary = reference_summary
+  system_summary = result_summary
   
   # write reference summary to file
   ref_dir = os.pardir + "/test-summarization/reference/" + article_id + "_" + "reference.txt"
@@ -149,7 +187,7 @@ def main():
   reference_summary_list = []
 
   #generate_score()
-  start_page_rank("test", None)
+  start_lda("test", 6, None)
   recall_list,precision_list,F_measure_list = PythonROUGE(parent_dir, system_summary_list,reference_summary_list, 1)
   print ('recall = ' + str(recall_list))
   print ('precision = ' + str(precision_list))
