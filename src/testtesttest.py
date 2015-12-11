@@ -90,12 +90,11 @@ def get_trigram_score(words):
     score = score + i[1]
   return score/float(size)
 
+def get_lowest_score_sentence(sentence)
+
 
 def main():
-  model = kenlm.LanguageModel("../data/language_model.arpa")
-  f = open('model.p', 'wb')
-  p = cloudpickle.CloudPickler(f)
-  p.dump(model)
+  model = kenlm.LanguageModel("../data/language_model.klm")
 
   # model = cPickle.load(open('model.p', 'rb'))
 
@@ -106,7 +105,7 @@ def main():
   #test = ["this", "man", "is", "a", "liar"]
   #test = ["three", "soldiers", "died", "today"]
   #test = "both were personally likable policy aficionados who inspired tremendous loyalty from aides"
-  test = "in november he spent parts of 14 days in florida, including a break for thanksgiving"
+  #test = "in november he spent parts of 14 days in florida, including a break for thanksgiving"
   words = word_tokenize(test)
   print "Original sentence:"
   print test, abs(model.score(' '.join(words)))
