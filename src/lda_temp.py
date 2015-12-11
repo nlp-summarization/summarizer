@@ -1,6 +1,7 @@
 from gensim import corpora, models, similarities
 from gensim.models import hdpmodel, ldamodel
 from itertools import izip
+import pickle
 
 documents = ["Human machine interface for lab abc computer applications",
               "A survey of user opinion of computer system response time",
@@ -37,3 +38,9 @@ for l,t in izip(corpus_lsi,corpus):
 print
 for top in lsi.print_topics():
   print top
+
+print corpus_lsi
+# pickle.dump(corpus_lsi, open('temp.p', 'wb'))
+reader = pickle.load(open('temp.p', 'rb'))
+print reader
+

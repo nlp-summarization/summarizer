@@ -91,7 +91,7 @@ def parse_summary(folder_path, num_files, allowed_keys):
 
   return raw_texts
 
-def generate_score(num_files=10):
+def generate_lsa_score(num_files=20):
   global system_summary_list, reference_summary_list
 
   directory = os.pardir
@@ -110,17 +110,20 @@ def generate_score(num_files=10):
   system_summary_list    = lsa.system_summary_list
   reference_summary_list = lsa.reference_summary_list
 
-def main():
+def run_lsa():
   global system_summary_list, reference_summary_list
   system_summary_list = []
   reference_summary_list = []
 
-  generate_score()
+  generate_lsa_score()
 
   recall_list,precision_list,F_measure_list = PythonROUGE(parent_dir, system_summary_list,reference_summary_list, 1)
   print ('recall = ' + str(recall_list))
   print ('precision = ' + str(precision_list))
   print ('F = ' + str(F_measure_list))
+
+def main():
+  run_lsa()
 
 if __name__ == "__main__":
   main()
