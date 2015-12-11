@@ -4,6 +4,11 @@ from nltk.corpus import stopwords
 from collections import defaultdict
 from string import punctuation
 from gensim import corpora, models, similarities
+import os, glob, sys
+import codecs
+
+global reference_summary_list
+global system_summary_list
 
 def save_word_dict(text):
   proc_text = []
@@ -87,7 +92,29 @@ def run_baseline(article_id, limit, reference_summary, text=None):
     result_summary = result_summary + ' ' + sentences[ranked_sentences[i]]
 
   system_summary = result_summary
+
+  sys_dir = os.pardir + "/test-summarization/system/" + article_id + "_" + "system.txt"
+  ref_dir = os.pardir + "/test-summarization/reference/" + article_id + "_" + "reference.txt"
+
+  write_to_file(ref_dir, reference_summary)
+  reference_summary_list.append([ref_dir])
+
+  # write system summary to file
+  write_to_file(sys_dir, system_summary)
+  system_summary_list.append(sys_dir)
+  test_print(reference_summary, system_summary)
+  return 1
+
+def test_print(reference_summary, system_summary):
+  print "\n### reference_summary ###"
+  print reference_summary
+  print "\n### system_summary ###"
   print system_summary
+  print "\n"
+
+def write_to_file(filename, summary):
+  with codecs.open(filename, 'w', encoding='utf8') as f:
+    f.write(str(summary.encode('ascii', errors='ignore')))
 
 def main():
   run_baseline("test", 2, "nothing")

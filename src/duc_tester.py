@@ -18,6 +18,7 @@ sys.path.insert(0, parent_dir + "/Rouge")
 from PythonROUGE import *
 
 import lsa
+import baseline
 
 global ROUGE_path, data_path
 global reference_summary_list
@@ -91,15 +92,18 @@ def parse_summary(folder_path, num_files, allowed_keys):
 
   return raw_texts
 
-def generate_lsa_score(num_files=20):
-  global system_summary_list, reference_summary_list
-
+def parse_summary_documents(num_files=20):
   directory = os.pardir
   document_path = os.path.join(directory, "data", "DUC2002_Summarization_Documents", "docs")
   summary_path = os.path.join(directory, "data", "summaries")
   
   raw_texts = parse_text(document_path, num_files)
   summ_texts = parse_summary(summary_path, num_files, raw_texts.keys())
+
+  return [raw_texts, summ_texts]
+
+def generate_lsa_score(raw_texts, summ_texts, num_files=20):
+  global system_summary_list, reference_summary_list
 
   lsa.system_summary_list = []
   lsa.reference_summary_list = []
@@ -110,12 +114,43 @@ def generate_lsa_score(num_files=20):
   system_summary_list    = lsa.system_summary_list
   reference_summary_list = lsa.reference_summary_list
 
-def run_lsa():
+def run_summary_algos(num_files=10):
+  [raw_texts, summ_texts] = parse_summary_documents(num_files)
+  
+  # run baseline
+  run_baseline(raw_texts, summ_texts, num_files)
+  # run lsa
+  run_lsa(raw_texts, summ_texts, num_files)
+
+
+def run_baseline(raw_texts, summ_texts, num_files=20):
   global system_summary_list, reference_summary_list
   system_summary_list = []
   reference_summary_list = []
 
-  generate_lsa_score()
+  baseline.system_summary_list = []
+  baseline.reference_summary_list = []
+
+  for text_id in raw_texts.keys():
+    baseline.run_baseline(text_id, 2, summ_texts[text_id], raw_texts[text_id])
+    # lsa.start_lsa(text_id, 5, raw_texts[text_id], summ_texts[text_id])
+
+  system_summary_list    = baseline.system_summary_list
+  reference_summary_list = baseline.reference_summary_list
+
+  print "BASELINE"  
+  recall_list,precision_list,F_measure_list = PythonROUGE(parent_dir, system_summary_list,reference_summary_list, 1)
+  print ('recall = ' + str(recall_list))
+  print ('precision = ' + str(precision_list))
+  print ('F = ' + str(F_measure_list))
+  print "BASELINE END"  
+
+def run_lsa(raw_texts, summ_texts, num_files=20):
+  global system_summary_list, reference_summary_list
+  system_summary_list = []
+  reference_summary_list = []
+
+  generate_lsa_score(raw_texts, summ_texts, num_files)
 
   recall_list,precision_list,F_measure_list = PythonROUGE(parent_dir, system_summary_list,reference_summary_list, 1)
   print ('recall = ' + str(recall_list))
@@ -123,7 +158,7 @@ def run_lsa():
   print ('F = ' + str(F_measure_list))
 
 def main():
-  run_lsa()
+  run_summary_algos()
 
 if __name__ == "__main__":
   main()
