@@ -30,13 +30,13 @@ def get_paraphrase_dict():
   paraphrase_dict = None
   file_path = '../data/pickled_paraphrase'
   if os.path.isfile(file_path):
-    print("loading from file")
+    print("loading dictionary from pickled file")
     f = open(file_path, 'rb')
     paraphrase_dict = cPickle.load(f)
   else:
-    print("loading paraphrase dictionary")
+    print("loading paraphrase dictionary for first time. This will take a while.")
     paraphrase_dict = load_paraphrase_dict()
-    print("writing to file")
+    print("pickling dictionary")
     f = open(file_path, 'wb')
     cPickle.dump(paraphrase, f)
   return paraphrase_dict
@@ -90,32 +90,15 @@ def get_trigram_score(words):
     score = score + i[1]
   return score/float(size)
 
-def get_lowest_score_sentence(sentence)
-
-
-def main():
-  model = kenlm.LanguageModel("../data/language_model.klm")
-
-  # model = cPickle.load(open('model.p', 'rb'))
-
-  paraphrase_dict = get_paraphrase_dict()
-  print len(paraphrase_dict)
-
-  #test = ["the", "cat", "sat"]
-  #test = ["this", "man", "is", "a", "liar"]
-  #test = ["three", "soldiers", "died", "today"]
-  #test = "both were personally likable policy aficionados who inspired tremendous loyalty from aides"
-  #test = "in november he spent parts of 14 days in florida, including a break for thanksgiving"
-  words = word_tokenize(test)
-  print "Original sentence:"
-  print test, abs(model.score(' '.join(words)))
-  print ""
+def compress_sentence(model, sentence, paraphrase_dict, verbose=False):
+  words = word_tokenize(sentence)
+  if verbose:
+    print ""
+    print "Original sentence:"
+    print sentence, abs(model.score(' '.join(words)))
+    print ""
 
   combinations = ordered_combinations(words)
-
-  #print "Combinations:"
-  #for c in combinations: print c
-  #print ""
 
   paraphrased_sentences = []
   for split_sentence in combinations:
@@ -151,42 +134,44 @@ def main():
       index_of_smallest = i
       min_length = length
 
-
-  #for x in paraphrased_sentences:
-  #  print x
-
-  # print "Paraphrased sentences:"
-  #for c,p in zip(paraphrased_sentences, combinations):
-    #score = get_trigram_score(word_tokenize(' '.join(c)))
-  #  print p, ' => ',  c, ' score = ', abs(model.score(' '.join(c))), get_trigram_score(' '.join(c))
-
   lowest_score_word_list = paraphrased_sentences[index_of_lowest_score]
-  paraphrased_sentence = ' '.join(lowest_score_word_list)
-  print "Solution with lowest score:"
-  print paraphrased_sentence, abs(model.score(paraphrased_sentence))
+  lowest_score_sentence = ' '.join(lowest_score_word_list)
+  if verbose:
+    print "Solution with lowest score:"
+    print lowest_score_sentence, abs(model.score(lowest_score_sentence))
 
   smallest_length_word_list = paraphrased_sentences[index_of_smallest]
-  paraphrased_sentence = ' '.join(smallest_length_word_list)
-  print ""
-  print "Solution with smallest length:"
-  print paraphrased_sentence, abs(model.score(paraphrased_sentence))
+  smallest_length_sentence = ' '.join(smallest_length_word_list)
+  if verbose:
+    print ""
+    print "Solution with smallest length:"
+    print smallest_length_sentence, abs(model.score(smallest_length_sentence))
 
-  print ""
-  print "Intersection of lowest score and lowest length:"
+  if verbose:
+    print ""
+    print "Intersection of lowest score and lowest length:"
   lowest_score_word_list = ' '.join(lowest_score_word_list).split()
   smallest_length_word_list = ' '.join(smallest_length_word_list).split()
   intersected_words = [itm for itm in lowest_score_word_list if itm in smallest_length_word_list]
-  #intersected_words = list(set(lowest_score_word_list).intersection(smallest_length_word_list))
-  print ' '.join(intersected_words), abs(model.score(' '.join(intersected_words)))
+  intersected_sentence = ' '.join(intersected_words)
+  if verbose:
+    print intersected_sentence, abs(model.score(' '.join(intersected_words)))
+    print ""
 
-  # language model
-  
-  #sentence = "this is sentence a."
-  #print model.score(sentence)
-
+  return [lowest_score_sentence, smallest_length_sentence, intersected_sentence]
 
 
 
+def main():
+  model = kenlm.LanguageModel("../data/language_model.klm")
+  paraphrase_dict = get_paraphrase_dict()
+  print "loaded: ", len(paraphrase_dict), " dictionary entries"
+
+  sentence = "in november he spent parts of 14 days in florida, including a break for thanksgiving"
+  [score_sent, length_sent, inter_sent] = compress_sentence(model, sentence, paraphrase_dict, True)
+  print score_sent
+  print length_sent
+  print inter_sent
 
 if __name__ == "__main__":
   main()
