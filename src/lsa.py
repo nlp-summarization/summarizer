@@ -64,7 +64,7 @@ def normalize_tf_matrix(matrix, alpha=0.7):
 
   return matrix
 
-def start_lsa(article_id, limit, text=None):
+def start_lsa(article_id, limit, text, reference_summary):
   if(text == None):
     text = "Thomas A. Anderson is a man living two lives. By day he is an " + \
       "average computer programmer and by night a hacker known as " + \
@@ -116,17 +116,20 @@ def start_lsa(article_id, limit, text=None):
 
   system_summary = result_summary
 
-  try:
-    reference_summary = summarize(text)
-  except (ValueError, ZeroDivisionError):
-    return -1
+  if(reference_summary != None):
+    try:
+      reference_summary = summarize(text)
+    except (ValueError, ZeroDivisionError):
+      return -1
 
   # if(reference_summary == None or len(reference_summary) == 0 or len(reference_summary) > 140):
   #   return -1
 
   # write reference summary to file
-  ref_dir = os.pardir + "/test-summarization/reference/" + article_id + "_" + "reference.txt"
+  
   sys_dir = os.pardir + "/test-summarization/system/" + article_id + "_" + "system.txt"
+  ref_dir = os.pardir + "/test-summarization/reference/" + article_id + "_" + "reference.txt"
+
   write_to_file(ref_dir, reference_summary)
   reference_summary_list.append([ref_dir])
 
@@ -153,7 +156,7 @@ def main():
   system_summary_list = []
   reference_summary_list = []
 
-  start_lsa("test", 1)
+  start_lsa("test", 2, None, None)
   recall_list, precision_list, F_measure_list = PythonROUGE(parent_dir, system_summary_list,reference_summary_list, 1)
   print ('recall = ' + str(recall_list))
   print ('precision = ' + str(precision_list))
