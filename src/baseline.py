@@ -102,8 +102,8 @@ def run_baseline(article_id, limit, reference_summary, text=None):
   # write system summary to file
   write_to_file(sys_dir, system_summary)
   system_summary_list.append(sys_dir)
-  test_print(reference_summary, system_summary)
-  return 1
+  # test_print(reference_summary, system_summary)
+  return ranked_sentences
 
 def test_print(reference_summary, system_summary):
   print "\n### reference_summary ###"

@@ -136,8 +136,8 @@ def start_lsa(article_id, limit, text, reference_summary):
   # write system summary to file
   write_to_file(sys_dir, system_summary)
   system_summary_list.append(sys_dir)
-  test_print(reference_summary, system_summary)
-  return 1
+  # test_print(reference_summary, system_summary)
+  return ranked_sentences
 
 def test_print(reference_summary, system_summary):
   print "\n### reference_summary ###"

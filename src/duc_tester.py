@@ -20,6 +20,7 @@ from PythonROUGE import *
 import lsa
 import baseline
 import page_rank
+import lex_rank
 
 global ROUGE_path, data_path
 global reference_summary_list
@@ -110,21 +111,28 @@ def generate_lsa_score(raw_texts, summ_texts, num_files=20):
   lsa.system_summary_list = []
   lsa.reference_summary_list = []
 
+  ranks = []
   for text_id in raw_texts.keys():
-    lsa.start_lsa(text_id, 5, raw_texts[text_id], summ_texts[text_id])
+    ranks.append(lsa.start_lsa(text_id, 5, raw_texts[text_id], summ_texts[text_id]))
 
   system_summary_list    = lsa.system_summary_list
   reference_summary_list = lsa.reference_summary_list
 
+  return ranks
+
 def run_summary_algos(num_files=1):
   [raw_texts, summ_texts] = parse_summary_documents(num_files)
   
-  # run baseline
-  run_baseline(raw_texts, summ_texts, num_files)
-  # run lsa
-  run_lsa(raw_texts, summ_texts, num_files)
+  print "########### RANKS : ########### "
+  print run_lex_rank(raw_texts, summ_texts, num_files)
 
-  run_page_rank(raw_texts, summ_texts, num_files)
+  print run_baseline(raw_texts, summ_texts, num_files)
+
+  print run_lsa(raw_texts, summ_texts, num_files)
+
+  print run_page_rank(raw_texts, summ_texts, num_files)
+
+  print "###############################"
 
 def run_page_rank(raw_texts, summ_texts, num_files=20):
   global system_summary_list, reference_summary_list, rouge_score_summaries
@@ -134,8 +142,9 @@ def run_page_rank(raw_texts, summ_texts, num_files=20):
   page_rank.system_summary_list = []
   page_rank.reference_summary_list = []
 
+  ranks = []
   for text_id in raw_texts.keys():
-    page_rank.start_page_rank(text_id, 2, summ_texts[text_id], raw_texts[text_id])
+    ranks.append(page_rank.start_page_rank(text_id, 3, summ_texts[text_id], raw_texts[text_id]))
 
   system_summary_list    = page_rank.system_summary_list
   reference_summary_list = page_rank.reference_summary_list
@@ -148,6 +157,8 @@ def run_page_rank(raw_texts, summ_texts, num_files=20):
   score_summary["F"] = str(F_measure_list)
   rouge_score_summaries["Page Rank"] = score_summary
 
+  return ranks
+
 def run_baseline(raw_texts, summ_texts, num_files=20):
   global system_summary_list, reference_summary_list, rouge_score_summaries
   system_summary_list = []
@@ -156,8 +167,9 @@ def run_baseline(raw_texts, summ_texts, num_files=20):
   baseline.system_summary_list = []
   baseline.reference_summary_list = []
 
+  ranks = []
   for text_id in raw_texts.keys():
-    baseline.run_baseline(text_id, 2, summ_texts[text_id], raw_texts[text_id])
+    ranks.append(baseline.run_baseline(text_id, 2, summ_texts[text_id], raw_texts[text_id]))
 
   system_summary_list    = baseline.system_summary_list
   reference_summary_list = baseline.reference_summary_list
@@ -170,23 +182,50 @@ def run_baseline(raw_texts, summ_texts, num_files=20):
   score_summary["F"] = str(F_measure_list)
   rouge_score_summaries["Baseline"] = score_summary
 
+  return ranks
+
+def run_lex_rank(raw_texts, summ_texts, num_files=20):
+  global system_summary_list, reference_summary_list, rouge_score_summaries
+  system_summary_list = []
+  reference_summary_list = []
+
+  lex_rank.system_summary_list = []
+  lex_rank.reference_summary_list = []
+
+  ranks = []
+  for text_id in raw_texts.keys():
+    ranks.append(lex_rank.start_lex_rank(text_id, 2, summ_texts[text_id], raw_texts[text_id]))
+
+
+  system_summary_list    = lex_rank.system_summary_list
+  reference_summary_list = lex_rank.reference_summary_list
+
+  recall_list,precision_list,F_measure_list = PythonROUGE(parent_dir, system_summary_list,reference_summary_list, 1)
+
+  score_summary = {}
+  score_summary["recall"] = str(recall_list)
+  score_summary["precision"] = str(precision_list)
+  score_summary["F"] = str(F_measure_list)
+  rouge_score_summaries["Lex Rank"] = score_summary
+
+  return ranks
+
 def run_lsa(raw_texts, summ_texts, num_files=20):
   global system_summary_list, reference_summary_list, rouge_score_summaries
   system_summary_list = []
   reference_summary_list = []
 
-  generate_lsa_score(raw_texts, summ_texts, num_files)
+  ranks = generate_lsa_score(raw_texts, summ_texts, num_files)
 
   recall_list,precision_list,F_measure_list = PythonROUGE(parent_dir, system_summary_list,reference_summary_list, 1)
-  # print ('recall = ' + str(recall_list))
-  # print ('precision = ' + str(precision_list))
-  # print ('F = ' + str(F_measure_list))
+  
   score_summary = {}
   score_summary["recall"] = str(recall_list)
   score_summary["precision"] = str(precision_list)
   score_summary["F"] = str(F_measure_list)
 
   rouge_score_summaries["LSA"] = score_summary
+  return ranks
 
 def main():
   global rouge_score_summaries
