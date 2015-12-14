@@ -12,6 +12,9 @@ from gensim.models import ldamodel
 from nltk import tokenize
 import itertools
 from HTMLParser import HTMLParser
+import numpy
+import math
+from nltk.tokenize import sent_tokenize,word_tokenize
 
 parent_dir = os.pardir
 sys.path.insert(0, parent_dir + "/Rouge")
@@ -21,6 +24,11 @@ import lsa
 import baseline
 import page_rank
 import lex_rank
+
+import sentence_paraphrase
+
+import kenlm
+import cloudpickle
 
 global ROUGE_path, data_path
 global reference_summary_list
@@ -122,17 +130,138 @@ def generate_lsa_score(raw_texts, summ_texts, num_files=20):
 
 def run_summary_algos(num_files=1):
   [raw_texts, summ_texts] = parse_summary_documents(num_files)
+
+
+  ranks = {}
+  # ranks["lex"] = run_lex_rank(raw_texts, summ_texts, num_files)
+  # ranks["baseline"] = run_baseline(raw_texts, summ_texts, num_files)
+  # ranks["lsa"] = run_lsa(raw_texts, summ_texts, num_files)
+  # ranks["page_rank"] = run_page_rank(raw_texts, summ_texts, num_files)
+
   
-  print "########### RANKS : ########### "
-  print run_lex_rank(raw_texts, summ_texts, num_files)
+  # final_ranks = rank_interpoliation(ranks)
+  # sentences = sent_tokenize(raw_texts["AP880911-0016"])
+  # limit = 1
+  # summary = ""
+  # for i in xrange(limit):
+  #   summary = summary + " " + sentences[final_ranks[i]]
+  # print summary
 
-  print run_baseline(raw_texts, summ_texts, num_files)
 
-  print run_lsa(raw_texts, summ_texts, num_files)
 
-  print run_page_rank(raw_texts, summ_texts, num_files)
+  # print final_ranks
 
-  print "###############################"
+  ranks = {}
+  ranks["lex"] = run_lex_rank(raw_texts, summ_texts, num_files)
+  ranks["baseline"] = run_baseline(raw_texts, summ_texts, num_files)
+  ranks["lsa"] = run_lsa(raw_texts, summ_texts, num_files)
+  ranks["page_rank"] = run_page_rank(raw_texts, summ_texts, num_files)
+
+  system_summary_list = []
+  reference_summary_list = []
+  first_sentences = []
+
+  for doc_id, text_id in enumerate(raw_texts.keys()):
+  # for doc_id in range(0, num_files):
+    rank = {}
+    rank["lex"] = ranks["lex"][doc_id]
+    rank["baseline"] = ranks["baseline"][doc_id]
+    rank["lsa"] = ranks["lsa"][doc_id]
+    rank["page_rank"] = ranks["page_rank"][doc_id]
+    final_ranks = rank_interpoliation(rank)
+
+
+    
+
+    sentences = sent_tokenize(raw_texts[text_id])
+    final_ranks = ranks["lsa"][doc_id]
+    limit = 5
+    summary = ""
+    for i in xrange(limit):
+      if i == 0:
+        first_sentences.append(sentences[final_ranks[i]])
+      summary = summary + " " + sentences[final_ranks[i]]
+    
+    '''
+    print "\n################# FINAL SUMMARY ##############################\n" + text_id
+    print summary
+
+    print "\n################# REF SUMMARY ##############################\n" + text_id
+    print summ_texts[text_id]
+    '''
+
+    system_summary = summary
+    # call compression
+    reference_summary = summ_texts[text_id]
+
+    sys_dir = os.pardir + "/test-summarization/system/" + text_id + "_" + "system.txt"
+    ref_dir = os.pardir + "/test-summarization/reference/" + text_id + "_" + "reference.txt"
+
+    write_to_file(ref_dir, reference_summary)
+    reference_summary_list.append([ref_dir])
+
+    # write system summary to file
+    write_to_file(sys_dir, system_summary)
+    system_summary_list.append(sys_dir)
+
+  recall_list,precision_list,F_measure_list = PythonROUGE(parent_dir, system_summary_list,reference_summary_list, 1)
+  
+  score_summary = {}
+  score_summary["recall"] = str(recall_list)
+  score_summary["precision"] = str(precision_list)
+  score_summary["F"] = str(F_measure_list)
+
+  rouge_score_summaries["FINAL"] = score_summary
+
+  #return ranks
+  return first_sentences
+
+def write_to_file(filename, summary):
+  with codecs.open(filename, 'w', encoding='utf8') as f:
+    f.write(str(summary.encode('ascii', errors='ignore')))
+
+def rank_interpoliation(ranks):
+  scores = {}
+  weights = []
+  for algo, ranks in ranks.iteritems():
+    
+    if algo == "lex" and len(ranks) > 0: weights.append(0.4)
+    elif algo == "baseline" and len(ranks) > 0: weights.append(0.1)
+    elif algo == "page_rank" and len(ranks) > 0: weights.append(0.2)
+    elif algo == "lsa" and len(ranks) > 0: weights.append(0.3)
+    else: weights.append(0) 
+
+
+    for position, sentence_id in enumerate(ranks):
+      if sentence_id in scores:
+        scores[sentence_id].append(position)
+      else:
+        scores[sentence_id] = [position]
+
+  avg_var = []
+  for (sentence_id, positions) in scores.iteritems():
+    if len(positions) == 4:
+      [average, variance] = weighted_avg_and_std(positions, weights)
+      avg_var.append((sentence_id, round(average), variance))
+  
+  avg_var = sorted(avg_var, key = lambda x : (x[1], x[2]))
+  final_ranks = []
+  for s in avg_var:
+    final_ranks.append(s[0])
+  return final_ranks
+
+def weighted_avg_and_std(values, weights):
+    """
+    Return the weighted average and standard deviation.
+
+    values, weights -- Numpy ndarrays with the same shape.
+    """
+    
+    average = numpy.average(values, weights=weights)
+    variance = numpy.average((values-average)**2, weights=weights)  # Fast and numerically precise
+    return (average, math.sqrt(variance))
+
+
 
 def run_page_rank(raw_texts, summ_texts, num_files=20):
   global system_summary_list, reference_summary_list, rouge_score_summaries
@@ -230,13 +359,25 @@ def run_lsa(raw_texts, summ_texts, num_files=20):
 def main():
   global rouge_score_summaries
   rouge_score_summaries = {}
-  run_summary_algos(10)
+  system_summary = run_summary_algos(10)
 
+  paraphrase_dict = sentence_paraphrase.get_paraphrase_dict()
+
+  for i, s in enumerate(system_summary):
+    [score_sent, length_sent, inter_sent] = sentence_paraphrase.get_compressed_sentence(s, paraphrase_dict)
+    print "####### ORIGINAL #######"
+    print len(s), " ", s
+    print "####### COMPRESSED #######"
+    print len(score_sent), " ", score_sent, " ---- ", len(s)
+    print ""
+
+  '''
   for model in rouge_score_summaries.keys():
     print ("########## Model : " + str(model) + " ################ \n")
     print ('recall = ' + str(rouge_score_summaries[model]['recall']))
     print ('precision = ' + str(rouge_score_summaries[model]['precision']))
     print ('F = ' + str(rouge_score_summaries[model]['F']) + "\n")
+  '''
 
 if __name__ == "__main__":
   main()

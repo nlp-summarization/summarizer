@@ -15,7 +15,7 @@ test = ["the", "cat", "sat", "in", "the", "hat"]
 #combs = combinations(test, 1)
 
 def load_paraphrase_dict():
-  f=open("../data/paraphrase_large")
+  f=open("../data/paraphrase_xxxl")
   paraphrase = {}
   for line in f:
     split_struct = line.split("|||")
@@ -38,7 +38,7 @@ def get_paraphrase_dict():
     paraphrase_dict = load_paraphrase_dict()
     print("pickling dictionary")
     f = open(file_path, 'wb')
-    cPickle.dump(paraphrase, f)
+    cPickle.dump(paraphrase_dict, f)
   return paraphrase_dict
 
 # accepts list of words in sentence
@@ -161,17 +161,21 @@ def compress_sentence(model, sentence, paraphrase_dict, verbose=False):
   return [lowest_score_sentence, smallest_length_sentence, intersected_sentence]
 
 
+def get_compressed_sentence(sentence, paraphrase_dict, model=None):
+  if model == None:
+    model = kenlm.LanguageModel("../data/language_model.klm")
+  
+  
+
+  [score_sent, length_sent, inter_sent] = compress_sentence(model, sentence, paraphrase_dict)
+  return [score_sent, length_sent, inter_sent]
 
 def main():
   model = kenlm.LanguageModel("../data/language_model.klm")
-  paraphrase_dict = get_paraphrase_dict()
-  print "loaded: ", len(paraphrase_dict), " dictionary entries"
-
-  sentence = "in november he spent parts of 14 days in florida, including a break for thanksgiving"
-  [score_sent, length_sent, inter_sent] = compress_sentence(model, sentence, paraphrase_dict, True)
+  print len(sentence)
+  [score_sent, length_sent, inter_sent] = get_compressed_sentence(sentence, model)
+  print len(score_sent)
   print score_sent
-  print length_sent
-  print inter_sent
 
 if __name__ == "__main__":
   main()
