@@ -91,24 +91,28 @@ def start_lsa(article_id, limit, text, reference_summary):
   [u, s, v] = singular_value_decomposition(tf_matrix, full_matrices=False)
 
   reduction_ratio = 1.0
-  dimension = len(s)
+  dimension = s.shape[0]
   reduced_dimension = int(dimension * reduction_ratio)
 
-  min_dimension = 5
+  min_dimension = 1
 
   if(reduced_dimension < min_dimension):
     reduced_dimension = min_dimension
 
   s2 = numpy.array(s, copy=True)
-  s2 = numpy.square(s2).tolist()
+  s2 = numpy.square(s2)
 
-  for i in range(reduced_dimension, dimension):
-    s2[i,:] *= 0.0
+  if(reduced_dimension < dimension):
+    for i in range(reduced_dimension, dimension):
+      s2[i] = 0
 
   # http://textmining.zcu.cz/publications/PhDThesis-Steinberger.pdf
   # see page 25 - Sk = sqrt(sum(v * sigma^2 ))
   ranks = numpy.sqrt(numpy.square(v.T*s2).sum(axis=1))
+  #print "ranks " , ranks
   ranked_sentences = sorted(range(len(ranks)),key=lambda x:ranks[x], reverse=True)
+  #print "ranked_sentences ", ranked_sentences
+
   
   result_summary = ''
   for i in range(0, limit):
@@ -116,11 +120,11 @@ def start_lsa(article_id, limit, text, reference_summary):
 
   system_summary = result_summary
 
-  if(reference_summary != None):
-    try:
-      reference_summary = summarize(text)
-    except (ValueError, ZeroDivisionError):
-      return -1
+  # if(reference_summary != None):
+  #   try:
+  #     reference_summary = summarize(text)
+  #   except (ValueError, ZeroDivisionError):
+  #     return -1
 
   # if(reference_summary == None or len(reference_summary) == 0 or len(reference_summary) > 140):
   #   return -1

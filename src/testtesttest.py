@@ -38,7 +38,7 @@ def get_paraphrase_dict():
     paraphrase_dict = load_paraphrase_dict()
     print("pickling dictionary")
     f = open(file_path, 'wb')
-    cPickle.dump(paraphrase_dict, f)
+    cPickle.dump(paraphrase, f)
   return paraphrase_dict
 
 # accepts list of words in sentence
@@ -92,7 +92,6 @@ def get_trigram_score(words):
 
 def compress_sentence(model, sentence, paraphrase_dict, verbose=False):
   words = word_tokenize(sentence)
-  sentence_length = len(words)
   if verbose:
     print ""
     print "Original sentence:"
@@ -100,8 +99,6 @@ def compress_sentence(model, sentence, paraphrase_dict, verbose=False):
     print ""
 
   combinations = ordered_combinations(words)
-  #for i in combinations:
-  #  print i
 
   paraphrased_sentences = []
   for split_sentence in combinations:
@@ -112,16 +109,6 @@ def compress_sentence(model, sentence, paraphrase_dict, verbose=False):
       else:
         sent.append(phrase_to_check)
     paraphrased_sentences.append(sent)
-
-  temp = []
-  for p in paraphrased_sentences:
-    if len(p) < round(0.7*(sentence_length)):
-      temp.append(p)
-  paraphrased_sentences = temp
-
-  #for p in paraphrased_sentences:
-  #  print p
-  #  print len(' '.join(p)), ' ', ' '.join(p)
 
   # sentence with lowest score
   index_of_lowest_score = 0
@@ -174,30 +161,14 @@ def compress_sentence(model, sentence, paraphrase_dict, verbose=False):
   return [lowest_score_sentence, smallest_length_sentence, intersected_sentence]
 
 
-def get_compressed_sentence(sentence, paraphrase_dict, model=None):
-  if model == None:
-    model = kenlm.LanguageModel("../data/language_model.klm")
-  
-  
-
-  [score_sent, length_sent, inter_sent] = compress_sentence(model, sentence, paraphrase_dict)
-  return [score_sent, length_sent, inter_sent]
 
 def main():
   model = kenlm.LanguageModel("../data/language_model.klm")
   paraphrase_dict = get_paraphrase_dict()
-  #sentence = "three international space station crew members landed in the snowy steppe to the northeast of the kazakh city of zhezkazgan on friday, a nasa television broadcast showed"
-  #sentence = "for artificial intelligence and smart machines to really take off, computers are going to have to be able to think more like people, according to experts in the field"
-  #sentence = "privately-owned space exploration technologies is aiming to return its repaired Falcon 9 rocket to flight next week, following a launch accident six months ago, the company said on thursday"
-  #sentence = "u.s. president barack obama is open to visiting to cuba in 2016 but first wants to see ordinary citizens there enjoy more personal freedoms, he said in an interview released on monday"
-  #sentence = "dec 14 japan's nikkei share average tumbled to a six-week low on monday as global oil prices extended their decline, adding to nervousness ahead of an expected u.s. interest rate hike this week"
-  sentence = "today it is sunny"
-  print len(sentence)
-  [score_sent, length_sent, inter_sent] = get_compressed_sentence(sentence, paraphrase_dict, model)
-  print len(inter_sent)
-  print score_sent
-  print length_sent
-  print inter_sent
+  print "loaded: ", len(paraphrase_dict), " dictionary entries"
+
+  sentence = "in november he spent parts of 14 days in florida, including a break for thanksgiving"
+  [score_sent, length_sent, inter_sent] = compress_sentence(model, sentence, paraphrase_dict, True)
 
 if __name__ == "__main__":
   main()

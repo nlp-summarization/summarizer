@@ -74,7 +74,9 @@ def start_page_rank(article_id, limit, reference_summary, text=None):
 
   ranks = [1.0]*len(proc_text)
   temp_ranks = [1.0]*len(proc_text)
-  damping_factor = 0.5
+
+  # Original is 0.5
+  damping_factor = 0.1
   num_sent = len(proc_text)
 
   while(not converged):

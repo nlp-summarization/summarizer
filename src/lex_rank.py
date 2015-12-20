@@ -89,9 +89,9 @@ def start_lex_rank(article_id, limit, reference_summary, text=None):
 
   [tf_matrix, idf_values] = compute_tf_idf(dictionary, proc_text)
 
-  sentence_matrix = compute_sentence_similarity_matrix(dictionary, proc_text, tf_matrix, idf_values)
+  sentence_matrix = compute_sentence_similarity_matrix(dictionary, proc_text, tf_matrix, idf_values, 0.3)
   # print sentence_matrix
-  scores = power_method(sentence_matrix, 0.25)
+  scores = power(sentence_matrix, 0.25)
   
   ranked_sentences = sorted(range(len(scores)),key=lambda x:scores[x], reverse=True)
   
@@ -124,20 +124,18 @@ def write_to_file(filename, summary):
   with codecs.open(filename, 'w', encoding='utf8') as f:
     f.write(str(summary.encode('ascii', errors='ignore')))
 
-def power_method(matrix, epsilon):
-  transposed_matrix = matrix.T
-  sentences_count = len(matrix)
-  p_vector = numpy.array([1.0 / sentences_count] * sentences_count)
-  lambda_val = 1.0
+def power(m, e):
+  mT = m.T
+  num_sentences = len(m)
+  pVc = numpy.array(num_sentences*[1.0/num_sentences])
+  l = 1.0
+  while l > e:
+      pNex = numpy.dot(mT, pVc)
+      l = numpy.linalg.norm(numpy.subtract(pNex, pVc))
+      pVc = pNex
+  return pVc
 
-  while lambda_val > epsilon:
-      next_p = numpy.dot(transposed_matrix, p_vector)
-      lambda_val = numpy.linalg.norm(numpy.subtract(next_p, p_vector))
-      p_vector = next_p
-
-  return p_vector
-
-def compute_sentence_similarity_matrix(dictionary, proc_text, tf_matrix, idf_values, threshold=0.001):
+def compute_sentence_similarity_matrix(dictionary, proc_text, tf_matrix, idf_values, threshold=0.01):
 
   sentence_length = len(proc_text)
   sentence_matrix = numpy.zeros((sentence_length, sentence_length), dtype=numpy.float)
@@ -169,10 +167,10 @@ def compute_sentence_similarity_matrix(dictionary, proc_text, tf_matrix, idf_val
         sentence_matrix[s_1, s_2] = 0.0
 
 
-  # for s_1 in range(0, sentence_length):
-  #   for s_2 in range(0, sentence_length):
-  #     if(degree_matrix[s_1] > 0.0):
-  #       sentence_matrix[s_1, s_2] = sentence_matrix[s_1, s_2]/degree_matrix[s_1]
+  for s_1 in range(0, sentence_length):
+   for s_2 in range(0, sentence_length):
+     if(degree_matrix[s_1] > 0.0):
+       sentence_matrix[s_1, s_2] = sentence_matrix[s_1, s_2]/degree_matrix[s_1]
 
   return sentence_matrix
 

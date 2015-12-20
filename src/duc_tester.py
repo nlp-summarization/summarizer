@@ -35,8 +35,9 @@ global reference_summary_list
 global system_summary_list
 global rouge_score_summaries
 
-def parse_text(folder_path, num_files=1):
+def parse_text(folder_path, start_offset, num_files=1):
 
+  
   num_files_read = 0
   root_tag = ET.Element("root")
 
@@ -49,9 +50,16 @@ def parse_text(folder_path, num_files=1):
       
       if not file.startswith('.') and os.path.isfile(os.path.join(root, file)) and num_files_read < num_files:
         
-        
-        e = xml.etree.ElementTree.parse(os.path.join(root, file))
-        
+        if num_files_read < start_offset:
+          num_files_read = num_files_read + 1
+          continue  
+
+        try:
+          e = xml.etree.ElementTree.parse(os.path.join(root, file))
+        except xml.etree.ElementTree.ParseError as e:
+          print (file)
+          print e
+          continue
         text = ''
 
         text_tag = e.findall("TEXT")
@@ -103,12 +111,13 @@ def parse_summary(folder_path, num_files, allowed_keys):
 
   return raw_texts
 
-def parse_summary_documents(num_files=20):
+def parse_summary_documents(start, end):
+  num_files = end - start
   directory = os.pardir
   document_path = os.path.join(directory, "data", "DUC2002_Summarization_Documents", "docs")
   summary_path = os.path.join(directory, "data", "summaries")
   
-  raw_texts = parse_text(document_path, num_files)
+  raw_texts = parse_text(document_path, start, end)
   summ_texts = parse_summary(summary_path, num_files, raw_texts.keys())
 
   return [raw_texts, summ_texts]
@@ -128,8 +137,9 @@ def generate_lsa_score(raw_texts, summ_texts, num_files=20):
 
   return ranks
 
-def run_summary_algos(num_files=1):
-  [raw_texts, summ_texts] = parse_summary_documents(num_files)
+def run_summary_algos(start, end, lambda1, lambda2, lambda3):
+  num_files = end - start
+  [raw_texts, summ_texts] = parse_summary_documents(start, end)
 
 
   ranks = {}
@@ -165,16 +175,13 @@ def run_summary_algos(num_files=1):
   # for doc_id in range(0, num_files):
     rank = {}
     rank["lex"] = ranks["lex"][doc_id]
-    rank["baseline"] = ranks["baseline"][doc_id]
+    #rank["baseline"] = ranks["baseline"][doc_id]
     rank["lsa"] = ranks["lsa"][doc_id]
     rank["page_rank"] = ranks["page_rank"][doc_id]
-    final_ranks = rank_interpoliation(rank)
-
-
-    
+    final_ranks = rank_interpoliation(rank, lambda1, lambda2, lambda3)
 
     sentences = sent_tokenize(raw_texts[text_id])
-    final_ranks = ranks["lsa"][doc_id]
+    
     limit = 5
     summary = ""
     for i in xrange(limit):
@@ -189,6 +196,7 @@ def run_summary_algos(num_files=1):
     print "\n################# REF SUMMARY ##############################\n" + text_id
     print summ_texts[text_id]
     '''
+    
 
     system_summary = summary
     # call compression
@@ -220,34 +228,39 @@ def write_to_file(filename, summary):
   with codecs.open(filename, 'w', encoding='utf8') as f:
     f.write(str(summary.encode('ascii', errors='ignore')))
 
-def rank_interpoliation(ranks):
+def rank_interpoliation(ranks, lambda1, lambda2, lambda3):
+  
   scores = {}
   weights = []
-  for algo, ranks in ranks.iteritems():
+  for algo, rank in ranks.iteritems():
     
-    if algo == "lex" and len(ranks) > 0: weights.append(0.4)
-    elif algo == "baseline" and len(ranks) > 0: weights.append(0.1)
-    elif algo == "page_rank" and len(ranks) > 0: weights.append(0.2)
-    elif algo == "lsa" and len(ranks) > 0: weights.append(0.3)
+
+    if algo == "lex" and len(rank) > 0: weights.append(lambda2)
+    #elif algo == "baseline" and len(rank) > 0: weights.append(0.1)
+    elif algo == "page_rank" and len(rank) > 0: weights.append(lambda1)
+    elif algo == "lsa" and len(rank) > 0: weights.append(lambda3)
     else: weights.append(0) 
 
-
-    for position, sentence_id in enumerate(ranks):
+    for position, sentence_id in enumerate(rank):
       if sentence_id in scores:
         scores[sentence_id].append(position)
       else:
         scores[sentence_id] = [position]
 
   avg_var = []
+
   for (sentence_id, positions) in scores.iteritems():
-    if len(positions) == 4:
+    if len(positions) == 3:
       [average, variance] = weighted_avg_and_std(positions, weights)
       avg_var.append((sentence_id, round(average), variance))
   
+  
   avg_var = sorted(avg_var, key = lambda x : (x[1], x[2]))
+  
   final_ranks = []
   for s in avg_var:
     final_ranks.append(s[0])
+
   return final_ranks
 
 def weighted_avg_and_std(values, weights):
@@ -359,10 +372,30 @@ def run_lsa(raw_texts, summ_texts, num_files=20):
 def main():
   global rouge_score_summaries
   rouge_score_summaries = {}
-  system_summary = run_summary_algos(10)
+  #lambda1 = 0.4; 
+  #lambda2 = 0.4;
+  #lambda3 = 0.2;
+  all_lambda = [0.1, 0.2, 0.3, 0.4, 0.5, 0.5, 0.7, 0.8, 0.9, 1.0];
 
-  paraphrase_dict = sentence_paraphrase.get_paraphrase_dict()
+  lambdas = {}
+  for lambda1 in all_lambda:
+    for lambda2 in all_lambda:
+      for lambda3 in all_lambda:
+        if (abs(1.0 - (lambda1 + lambda2 + lambda3)) < 0.0001):
+          lambdas[(lambda1, lambda2, lambda3)] = 1
 
+
+  '''
+  for values in lambdas:
+    lambda1 = values[0]
+    lambda2 = values[1]
+    lambda3 = values[2]
+    system_summary = run_summary_algos(0,160,lambda1, lambda2, lambda3)
+    print values, ' ' , ('F = ' + str(rouge_score_summaries['FINAL']['F']) + "\n")
+  #paraphrase_dict = sentence_paraphrase.get_paraphrase_dict()
+  '''
+
+  '''
   for i, s in enumerate(system_summary):
     [score_sent, length_sent, inter_sent] = sentence_paraphrase.get_compressed_sentence(s, paraphrase_dict)
     print "####### ORIGINAL #######"
@@ -370,14 +403,43 @@ def main():
     print "####### COMPRESSED #######"
     print len(score_sent), " ", score_sent, " ---- ", len(s)
     print ""
+    '''
+
+  lambda1 = 0.4
+  lambda2 = 0.3
+  lambda3 = 0.3
+  # Training set
+  system_summary = run_summary_algos(160,200,lambda1, lambda2, lambda3)
 
   '''
+  cleaned_sentences = []
+  for s in system_summary:
+    words = word_tokenize(s)
+    cleaned_sentences.append(' '.join(words))
+
+  paraphrase_dict = sentence_paraphrase.get_paraphrase_dict()
+  average_compression_percentage = 0.0
+  for i, c in enumerate(cleaned_sentences):
+    [score_sent, length_sent, inter_sent] = sentence_paraphrase.get_compressed_sentence(c, paraphrase_dict)
+    average_compression_percentage = average_compression_percentage + (1.0/float(len(cleaned_sentences)))*(float(len(score_sent))/float(len(c)))
+    if len(score_sent) < 145 and len(c) >= 145:
+      print i
+      print "original sentence:   ", c
+      print "compressed sentence: ", score_sent
+      print ""
+    #print "completion: ", (float(i)/200.0) * 100.0, ' %'
+
+  #print "compression: ", (1.0 - average_compression_percentage)*100.0, '%'
+  '''
+  
   for model in rouge_score_summaries.keys():
     print ("########## Model : " + str(model) + " ################ \n")
     print ('recall = ' + str(rouge_score_summaries[model]['recall']))
     print ('precision = ' + str(rouge_score_summaries[model]['precision']))
     print ('F = ' + str(rouge_score_summaries[model]['F']) + "\n")
-  '''
+  
+  
+  
 
 if __name__ == "__main__":
   main()

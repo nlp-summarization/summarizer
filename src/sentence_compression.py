@@ -177,7 +177,10 @@ def main():
   #root_token = generate_parse_tree(nlp, sentence2)
   #pretty_print_tree(root_token)
   #x = LpVariable("x",0,3)
-  sentence_compression(nlp)
+  #sentence_compression(nlp)
+  sentence = "for artificial intelligence and smart machines to really take off, computers are going to have to be able to think more like people, according to experts in the field"
+  root_token = generate_parse_tree(nlp, sentence)
+  pretty_print_tree(root_token)
 
 if __name__ == "__main__":
   main()
